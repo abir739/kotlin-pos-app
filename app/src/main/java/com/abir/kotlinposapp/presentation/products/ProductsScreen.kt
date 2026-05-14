@@ -1,6 +1,7 @@
 package com.abir.kotlinposapp.presentation.products
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -22,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -51,36 +51,42 @@ fun ProductsScreen(
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var editingProduct by remember { mutableStateOf<Product?>(null) }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Products") }) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                editingProduct = null
-                showDialog = true
-            }) {
-                Icon(Icons.Default.Add, contentDescription = "Add product")
+    Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        TopAppBar(title = { Text("Products") })
+
+        Box(modifier = Modifier.weight(1f)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 88.dp  // space for FAB
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(products, key = { it.id }) { product ->
+                    ProductCard(
+                        product = product,
+                        onEdit = {
+                            editingProduct = product
+                            showDialog = true
+                        },
+                        onDelete = { viewModel.delete(product) }
+                    )
+                }
             }
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = padding.calculateTopPadding() + 8.dp,
-                bottom = innerPadding.calculateBottomPadding() + 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(products, key = { it.id }) { product ->
-                ProductCard(
-                    product = product,
-                    onEdit = {
-                        editingProduct = product
-                        showDialog = true
-                    },
-                    onDelete = { viewModel.delete(product) }
-                )
+
+            FloatingActionButton(
+                onClick = {
+                    editingProduct = null
+                    showDialog = true
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add product")
             }
         }
     }
