@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,8 +63,8 @@ fun CheckoutScreen(
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     var showProductPicker by remember { mutableStateOf(false) }
+    var showScanner by remember { mutableStateOf(false) }
 
-    // Show snackbar when order is placed, then reset the flag
     LaunchedEffect(uiState.orderPlaced) {
         if (uiState.orderPlaced) {
             snackbarHostState.showSnackbar("Order placed successfully!")
@@ -71,11 +72,22 @@ fun CheckoutScreen(
         }
     }
 
+    LaunchedEffect(uiState.barcodeError) {
+        uiState.barcodeError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onBarcodeErrorHandled()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Checkout") },
                 actions = {
+                    IconButton(onClick = { showScanner = true }) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
+                    }
                     IconButton(onClick = { showProductPicker = true }) {
                         Icon(Icons.Default.AddShoppingCart, contentDescription = "Add product")
                     }
@@ -120,9 +132,21 @@ fun CheckoutScreen(
                 )
             }
         }
-    }
 
-    // Bottom sheet — product picker
+    } // end Scaffold
+
+    // Scanner overlay — fullscreen, on top of the Scaffold
+    if (showScanner) {
+        BarcodeScannerScreen(
+            onBarcodeDetected = { barcode ->
+                showScanner = false
+                viewModel.addToCartByBarcode(barcode)
+            },
+            onClose = { showScanner = false }
+        )
+    }
+    } // end Box
+
     if (showProductPicker) {
         ModalBottomSheet(
             onDismissRequest = { showProductPicker = false },
@@ -148,7 +172,7 @@ private fun EmptyCartMessage(modifier: Modifier = Modifier) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Cart is empty", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Tap + to add products",
+                "Tap + to add products or scan a barcode",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -6,6 +6,7 @@ import com.abir.kotlinposapp.domain.model.CartItem
 import com.abir.kotlinposapp.domain.model.Order
 import com.abir.kotlinposapp.domain.model.OrderItem
 import com.abir.kotlinposapp.domain.model.Product
+import com.abir.kotlinposapp.domain.usecase.GetProductByBarcodeUseCase
 import com.abir.kotlinposapp.domain.usecase.GetProductsUseCase
 import com.abir.kotlinposapp.domain.usecase.SaveOrderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +21,8 @@ import javax.inject.Inject
 
 data class CheckoutUiState(
     val cartItems: List<CartItem> = emptyList(),
-    val orderPlaced: Boolean = false
+    val orderPlaced: Boolean = false,
+    val barcodeError: String? = null
 ) {
     val total: Double get() = cartItems.sumOf { it.subtotal }
 }
@@ -28,7 +30,8 @@ data class CheckoutUiState(
 @HiltViewModel
 class CheckoutViewModel @Inject constructor(
     getProductsUseCase: GetProductsUseCase,
-    private val saveOrderUseCase: SaveOrderUseCase
+    private val saveOrderUseCase: SaveOrderUseCase,
+    private val getProductByBarcodeUseCase: GetProductByBarcodeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CheckoutUiState())
@@ -49,6 +52,21 @@ class CheckoutViewModel @Inject constructor(
             }
             state.copy(cartItems = current)
         }
+    }
+
+    fun addToCartByBarcode(barcode: String) {
+        viewModelScope.launch {
+            val product = getProductByBarcodeUseCase(barcode)
+            if (product != null) {
+                addToCart(product)
+            } else {
+                _uiState.update { it.copy(barcodeError = "No product found for this barcode") }
+            }
+        }
+    }
+
+    fun onBarcodeErrorHandled() {
+        _uiState.update { it.copy(barcodeError = null) }
     }
 
     fun increaseQuantity(product: Product) = addToCart(product)
