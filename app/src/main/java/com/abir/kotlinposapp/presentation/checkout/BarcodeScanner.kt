@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,8 +107,11 @@ fun BarcodeScannerScreen(
 private fun CameraPreview(onBarcodeDetected: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    // AtomicBoolean prevents calling onBarcodeDetected multiple times per scan
     val detected = remember { AtomicBoolean(false) }
+
+    // rememberUpdatedState ensures the factory closure always calls the latest lambda,
+    // even when Compose recomposes with a new onBarcodeDetected reference.
+    val currentCallback = rememberUpdatedState(onBarcodeDetected)
 
     AndroidView(
         factory = { ctx ->
@@ -134,7 +138,8 @@ private fun CameraPreview(onBarcodeDetected: (String) -> Unit) {
                         analysis.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
                             processImageProxy(barcodeScanner, imageProxy) { barcode ->
                                 if (detected.compareAndSet(false, true)) {
-                                    onBarcodeDetected(barcode)
+                                    // .value reads the latest lambda at call time
+                                    currentCallback.value(barcode)
                                 }
                             }
                         }
@@ -155,6 +160,13 @@ private fun CameraPreview(onBarcodeDetected: (String) -> Unit) {
 
             previewView
         },
+        // Explicitly unbind the camera when this composable leaves composition.
+        // Without this, CameraX stays bound to the Activity lifecycle and reacts
+        // to window-focus changes (e.g. a Dialog appearing) by flashing on/off.
+        onRelease = {
+            val future = ProcessCameraProvider.getInstance(context)
+            if (future.isDone) future.get().unbindAll()
+        },
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -170,10 +182,8 @@ private fun ScannerOverlay() {
             val left = (size.width - scanBoxSize) / 2f
             val top = (size.height - scanBoxSize) / 2.5f
 
-            // Dark overlay — full screen
             drawRect(color = overlayColor)
 
-            // Cut a transparent hole for the scan zone
             drawRoundRect(
                 color = Color.Transparent,
                 topLeft = Offset(left, top),
@@ -182,7 +192,6 @@ private fun ScannerOverlay() {
                 blendMode = BlendMode.Clear
             )
 
-            // White border around the scan zone
             drawRoundRect(
                 color = frameColor,
                 topLeft = Offset(left, top),

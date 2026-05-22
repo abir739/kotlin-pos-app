@@ -22,7 +22,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abir.kotlinposapp.domain.model.CartItem
@@ -86,22 +85,6 @@ fun CheckoutScreen(
         }
     }
 
-    // Loading spinner while querying Open Food Facts
-    if (uiState.lookupState is BarcodeLookupState.Loading) {
-        Dialog(onDismissRequest = {}) {
-            Card(shape = MaterialTheme.shapes.medium) {
-                Column(
-                    modifier = Modifier.padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text("Searching product online…")
-                }
-            }
-        }
-    }
-
     // Product found online — ask user to confirm name + set price
     if (uiState.lookupState is BarcodeLookupState.Found) {
         ProductFoundDialog(
@@ -120,17 +103,25 @@ fun CheckoutScreen(
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Checkout") },
-                actions = {
-                    IconButton(onClick = { showScanner = true }) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
+            Column {
+                TopAppBar(
+                    title = { Text("Checkout") },
+                    actions = {
+                        IconButton(onClick = { showScanner = true }) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
+                        }
+                        IconButton(onClick = { showProductPicker = true }) {
+                            Icon(Icons.Default.AddShoppingCart, contentDescription = "Add product")
+                        }
                     }
-                    IconButton(onClick = { showProductPicker = true }) {
-                        Icon(Icons.Default.AddShoppingCart, contentDescription = "Add product")
-                    }
+                )
+                // Thin progress bar shown while looking up a barcode online.
+                // Using LinearProgressIndicator (not Dialog) avoids creating a new window,
+                // which would trigger Activity focus changes and camera flashing.
+                if (uiState.lookupState is BarcodeLookupState.Loading) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
-            )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
