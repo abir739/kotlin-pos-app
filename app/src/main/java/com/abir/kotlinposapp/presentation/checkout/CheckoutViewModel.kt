@@ -6,8 +6,10 @@ import com.abir.kotlinposapp.domain.model.CartItem
 import com.abir.kotlinposapp.domain.model.Order
 import com.abir.kotlinposapp.domain.model.OrderItem
 import com.abir.kotlinposapp.domain.model.Product
+import com.abir.kotlinposapp.domain.usecase.AddProductUseCase
 import com.abir.kotlinposapp.domain.usecase.GetProductByBarcodeUseCase
 import com.abir.kotlinposapp.domain.usecase.GetProductsUseCase
+import com.abir.kotlinposapp.domain.usecase.LookupBarcodeOnlineUseCase
 import com.abir.kotlinposapp.domain.usecase.SaveOrderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,10 +21,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// Represents every possible state of an online barcode lookup
+sealed class BarcodeLookupState {
+    object Idle : BarcodeLookupState()
+    object Loading : BarcodeLookupState()
+    data class Found(val name: String, val barcode: String) : BarcodeLookupState()
+}
+
 data class CheckoutUiState(
     val cartItems: List<CartItem> = emptyList(),
     val orderPlaced: Boolean = false,
-    val barcodeError: String? = null
+    val barcodeError: String? = null,
+    val lookupState: BarcodeLookupState = BarcodeLookupState.Idle
 ) {
     val total: Double get() = cartItems.sumOf { it.subtotal }
 }
@@ -31,13 +41,14 @@ data class CheckoutUiState(
 class CheckoutViewModel @Inject constructor(
     getProductsUseCase: GetProductsUseCase,
     private val saveOrderUseCase: SaveOrderUseCase,
-    private val getProductByBarcodeUseCase: GetProductByBarcodeUseCase
+    private val getProductByBarcodeUseCase: GetProductByBarcodeUseCase,
+    private val lookupBarcodeOnlineUseCase: LookupBarcodeOnlineUseCase,
+    private val addProductUseCase: AddProductUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CheckoutUiState())
     val uiState: StateFlow<CheckoutUiState> = _uiState.asStateFlow()
 
-    // Exposed for the "add product" dialog
     val products = getProductsUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -56,13 +67,46 @@ class CheckoutViewModel @Inject constructor(
 
     fun addToCartByBarcode(barcode: String) {
         viewModelScope.launch {
-            val product = getProductByBarcodeUseCase(barcode)
-            if (product != null) {
-                addToCart(product)
+            // 1. Check local DB first — instant, no network needed
+            val localProduct = getProductByBarcodeUseCase(barcode)
+            if (localProduct != null) {
+                addToCart(localProduct)
+                return@launch
+            }
+
+            // 2. Not in local DB — try the Open Food Facts API
+            _uiState.update { it.copy(lookupState = BarcodeLookupState.Loading) }
+            val result = lookupBarcodeOnlineUseCase(barcode)
+
+            if (result != null) {
+                // Product found online — ask the user to set a price before adding
+                _uiState.update {
+                    it.copy(lookupState = BarcodeLookupState.Found(result.name, result.barcode))
+                }
             } else {
-                _uiState.update { it.copy(barcodeError = "No product found for this barcode") }
+                _uiState.update {
+                    it.copy(
+                        lookupState = BarcodeLookupState.Idle,
+                        barcodeError = "Product not found for this barcode"
+                    )
+                }
             }
         }
+    }
+
+    // Called when the user confirms adding an online-found product with a price
+    fun confirmAddOnlineProduct(name: String, barcode: String, price: Double) {
+        viewModelScope.launch {
+            addProductUseCase(Product(name = name, price = price, barcode = barcode))
+            // Fetch the saved product to get its auto-generated Room ID
+            val saved = getProductByBarcodeUseCase(barcode)
+            if (saved != null) addToCart(saved)
+            _uiState.update { it.copy(lookupState = BarcodeLookupState.Idle) }
+        }
+    }
+
+    fun dismissLookupResult() {
+        _uiState.update { it.copy(lookupState = BarcodeLookupState.Idle) }
     }
 
     fun onBarcodeErrorHandled() {

@@ -12,20 +12,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -39,11 +43,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abir.kotlinposapp.domain.model.CartItem
@@ -77,6 +84,37 @@ fun CheckoutScreen(
             snackbarHostState.showSnackbar(it)
             viewModel.onBarcodeErrorHandled()
         }
+    }
+
+    // Loading spinner while querying Open Food Facts
+    if (uiState.lookupState is BarcodeLookupState.Loading) {
+        Dialog(onDismissRequest = {}) {
+            Card(shape = MaterialTheme.shapes.medium) {
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator()
+                    Text("Searching product online…")
+                }
+            }
+        }
+    }
+
+    // Product found online — ask user to confirm name + set price
+    if (uiState.lookupState is BarcodeLookupState.Found) {
+        ProductFoundDialog(
+            found = uiState.lookupState as BarcodeLookupState.Found,
+            onConfirm = { name, price ->
+                viewModel.confirmAddOnlineProduct(
+                    name = name,
+                    barcode = (uiState.lookupState as BarcodeLookupState.Found).barcode,
+                    price = price
+                )
+            },
+            onDismiss = { viewModel.dismissLookupResult() }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -298,4 +336,59 @@ private fun ProductPickerSheet(
             }
         }
     }
+}
+
+@Composable
+private fun ProductFoundDialog(
+    found: BarcodeLookupState.Found,
+    onConfirm: (name: String, price: Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(found.name) }
+    var price by rememberSaveable { mutableStateOf("") }
+    val priceError = price.toDoubleOrNull()?.let { it <= 0 } ?: true
+    val isValid = name.isNotBlank() && !priceError
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Product found online") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Found on Open Food Facts. Edit the name if needed and set the price.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Product name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Price") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = priceError && price.isNotEmpty(),
+                    supportingText = if (priceError && price.isNotEmpty()) {
+                        { Text("Enter a valid price greater than 0") }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), price.toDouble()) },
+                enabled = isValid
+            ) { Text("Add to products & cart") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Skip") }
+        }
+    )
 }

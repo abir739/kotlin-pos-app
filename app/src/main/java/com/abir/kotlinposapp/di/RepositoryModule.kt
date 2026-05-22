@@ -1,8 +1,10 @@
 package com.abir.kotlinposapp.di
 
 import com.abir.kotlinposapp.data.repository.OrderRepositoryImpl
+import com.abir.kotlinposapp.data.repository.ProductLookupRepositoryImpl
 import com.abir.kotlinposapp.data.repository.ProductRepositoryImpl
 import com.abir.kotlinposapp.domain.repository.OrderRepository
+import com.abir.kotlinposapp.domain.repository.ProductLookupRepository
 import com.abir.kotlinposapp.domain.repository.ProductRepository
 import dagger.Binds
 import dagger.Module
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindOrderRepository(impl: OrderRepositoryImpl): OrderRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProductLookupRepository(impl: ProductLookupRepositoryImpl): ProductLookupRepository
 }
