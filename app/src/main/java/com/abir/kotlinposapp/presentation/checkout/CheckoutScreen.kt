@@ -102,14 +102,25 @@ fun CheckoutScreen(
 
     // Barcode not found anywhere — let user add it manually with barcode pre-filled
     if (uiState.lookupState is BarcodeLookupState.NotFound) {
+        val notFound = uiState.lookupState as BarcodeLookupState.NotFound
         ProductNotFoundDialog(
-            notFound = uiState.lookupState as BarcodeLookupState.NotFound,
+            barcode = notFound.barcode,
+            message = "This barcode wasn't found in any database. Enter a name and price to add it.",
             onConfirm = { name, price ->
-                viewModel.confirmAddOnlineProduct(
-                    name = name,
-                    barcode = (uiState.lookupState as BarcodeLookupState.NotFound).barcode,
-                    price = price
-                )
+                viewModel.confirmAddOnlineProduct(name = name, barcode = notFound.barcode, price = price)
+            },
+            onDismiss = { viewModel.dismissLookupResult() }
+        )
+    }
+
+    // Network/server error — still allow manual entry
+    if (uiState.lookupState is BarcodeLookupState.NetworkError) {
+        val netError = uiState.lookupState as BarcodeLookupState.NetworkError
+        ProductNotFoundDialog(
+            barcode = netError.barcode,
+            message = "Couldn't reach the product database (check your internet connection). You can still add this product manually.",
+            onConfirm = { name, price ->
+                viewModel.confirmAddOnlineProduct(name = name, barcode = netError.barcode, price = price)
             },
             onDismiss = { viewModel.dismissLookupResult() }
         )
@@ -346,7 +357,8 @@ private fun ProductPickerSheet(
 
 @Composable
 private fun ProductNotFoundDialog(
-    notFound: BarcodeLookupState.NotFound,
+    barcode: String,
+    message: String,
     onConfirm: (name: String, price: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -361,12 +373,12 @@ private fun ProductNotFoundDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "This barcode wasn't found in any database. Enter a name and price to add it.",
+                    message,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "Barcode: ${notFound.barcode}",
+                    "Barcode: $barcode",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

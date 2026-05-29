@@ -28,6 +28,8 @@ sealed class BarcodeLookupState {
     data class Found(val name: String, val barcode: String) : BarcodeLookupState()
     // Barcode detected but not in Open Food Facts — user can still add it manually
     data class NotFound(val barcode: String) : BarcodeLookupState()
+    // Network or server error — user can still add the product manually
+    data class NetworkError(val barcode: String) : BarcodeLookupState()
 }
 
 data class CheckoutUiState(
@@ -78,17 +80,23 @@ class CheckoutViewModel @Inject constructor(
 
             // 2. Not in local DB — try the Open Food Facts API
             _uiState.update { it.copy(lookupState = BarcodeLookupState.Loading) }
-            val result = lookupBarcodeOnlineUseCase(barcode)
-
-            if (result != null) {
-                // Product found online — ask the user to set a price before adding
-                _uiState.update {
-                    it.copy(lookupState = BarcodeLookupState.Found(result.name, result.barcode))
+            try {
+                val result = lookupBarcodeOnlineUseCase(barcode)
+                if (result != null) {
+                    // Product found online — ask the user to set a price before adding
+                    _uiState.update {
+                        it.copy(lookupState = BarcodeLookupState.Found(result.name, result.barcode))
+                    }
+                } else {
+                    // Barcode not in Open Food Facts — let user add it manually
+                    _uiState.update {
+                        it.copy(lookupState = BarcodeLookupState.NotFound(barcode))
+                    }
                 }
-            } else {
-                // Not in local DB or Open Food Facts — let user add it manually with barcode pre-filled
+            } catch (e: Exception) {
+                // Network or server error — still let user add the product manually
                 _uiState.update {
-                    it.copy(lookupState = BarcodeLookupState.NotFound(barcode))
+                    it.copy(lookupState = BarcodeLookupState.NetworkError(barcode))
                 }
             }
         }
