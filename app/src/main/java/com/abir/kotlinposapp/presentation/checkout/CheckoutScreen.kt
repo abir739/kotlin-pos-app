@@ -100,6 +100,21 @@ fun CheckoutScreen(
         )
     }
 
+    // Barcode not found anywhere — let user add it manually with barcode pre-filled
+    if (uiState.lookupState is BarcodeLookupState.NotFound) {
+        ProductNotFoundDialog(
+            notFound = uiState.lookupState as BarcodeLookupState.NotFound,
+            onConfirm = { name, price ->
+                viewModel.confirmAddOnlineProduct(
+                    name = name,
+                    barcode = (uiState.lookupState as BarcodeLookupState.NotFound).barcode,
+                    price = price
+                )
+            },
+            onDismiss = { viewModel.dismissLookupResult() }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
@@ -327,6 +342,67 @@ private fun ProductPickerSheet(
             }
         }
     }
+}
+
+@Composable
+private fun ProductNotFoundDialog(
+    notFound: BarcodeLookupState.NotFound,
+    onConfirm: (name: String, price: Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var price by rememberSaveable { mutableStateOf("") }
+    val priceError = price.toDoubleOrNull()?.let { it <= 0 } ?: true
+    val isValid = name.isNotBlank() && !priceError
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Product not found") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "This barcode wasn't found in any database. Enter a name and price to add it.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Barcode: ${notFound.barcode}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Product name") },
+                    singleLine = true,
+                    isError = name.isEmpty() && price.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Price") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = priceError && price.isNotEmpty(),
+                    supportingText = if (priceError && price.isNotEmpty()) {
+                        { Text("Enter a valid price greater than 0") }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), price.toDouble()) },
+                enabled = isValid
+            ) { Text("Add to products & cart") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Skip") }
+        }
+    )
 }
 
 @Composable

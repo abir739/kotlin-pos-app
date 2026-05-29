@@ -26,6 +26,8 @@ sealed class BarcodeLookupState {
     object Idle : BarcodeLookupState()
     object Loading : BarcodeLookupState()
     data class Found(val name: String, val barcode: String) : BarcodeLookupState()
+    // Barcode detected but not in Open Food Facts — user can still add it manually
+    data class NotFound(val barcode: String) : BarcodeLookupState()
 }
 
 data class CheckoutUiState(
@@ -84,11 +86,9 @@ class CheckoutViewModel @Inject constructor(
                     it.copy(lookupState = BarcodeLookupState.Found(result.name, result.barcode))
                 }
             } else {
+                // Not in local DB or Open Food Facts — let user add it manually with barcode pre-filled
                 _uiState.update {
-                    it.copy(
-                        lookupState = BarcodeLookupState.Idle,
-                        barcodeError = "Product not found for this barcode"
-                    )
+                    it.copy(lookupState = BarcodeLookupState.NotFound(barcode))
                 }
             }
         }
