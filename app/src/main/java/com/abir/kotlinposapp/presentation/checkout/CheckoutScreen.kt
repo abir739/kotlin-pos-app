@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -77,6 +79,8 @@ private val avatarColors = listOf(
 @Composable
 fun CheckoutScreen(
     innerPadding: PaddingValues,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     viewModel: CheckoutViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -153,6 +157,12 @@ fun CheckoutScreen(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
                     actions = {
+                        IconButton(onClick = onToggleTheme) {
+                            Icon(
+                                imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode"
+                            )
+                        }
                         IconButton(onClick = { showScanner = true }) {
                             Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
                         }
@@ -297,7 +307,7 @@ private fun CartItemCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "৳ %.2f each".format(cartItem.product.price),
+                    "%.3f TND each".format(cartItem.product.price),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -345,7 +355,7 @@ private fun OrderSummary(total: Double, onPlaceOrder: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Subtotal", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("৳ %.2f".format(total), style = MaterialTheme.typography.bodyLarge)
+            Text("%.3f TND".format(total), style = MaterialTheme.typography.bodyLarge)
         }
         Spacer(modifier = Modifier.height(4.dp))
         Row(
@@ -353,7 +363,7 @@ private fun OrderSummary(total: Double, onPlaceOrder: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Tax (7%)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("৳ %.2f".format(tax), style = MaterialTheme.typography.bodyLarge)
+            Text("%.3f TND".format(tax), style = MaterialTheme.typography.bodyLarge)
         }
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()
@@ -364,7 +374,7 @@ private fun OrderSummary(total: Double, onPlaceOrder: () -> Unit) {
         ) {
             Text("Total", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "৳ %.2f".format(grandTotal),
+                "%.3f TND".format(grandTotal),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -420,7 +430,7 @@ private fun ProductPickerSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(product.name)
-                            Text("৳ %.2f".format(product.price))
+                            Text("%.3f TND".format(product.price))
                         }
                     }
                 }

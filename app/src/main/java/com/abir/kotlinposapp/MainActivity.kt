@@ -17,6 +17,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -41,7 +44,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            KotlinPOSAppTheme {
+            var isDarkTheme by remember { mutableStateOf(true) }
+            KotlinPOSAppTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
                 val currentEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentEntry?.destination?.route
@@ -90,11 +94,28 @@ class MainActivity : ComponentActivity() {
                         startDestination = Screen.Products.route,
                         contentAlignment = androidx.compose.ui.Alignment.TopStart
                     ) {
-                        composable(Screen.Products.route) { ProductsScreen(innerPadding) }
-                        composable(Screen.Checkout.route) {
-                            CheckoutScreen(innerPadding, checkoutViewModel)
+                        composable(Screen.Products.route) {
+                            ProductsScreen(
+                                innerPadding = innerPadding,
+                                isDarkTheme = isDarkTheme,
+                                onToggleTheme = { isDarkTheme = !isDarkTheme }
+                            )
                         }
-                        composable(Screen.Orders.route) { OrdersScreen(innerPadding) }
+                        composable(Screen.Checkout.route) {
+                            CheckoutScreen(
+                                innerPadding = innerPadding,
+                                isDarkTheme = isDarkTheme,
+                                onToggleTheme = { isDarkTheme = !isDarkTheme },
+                                viewModel = checkoutViewModel
+                            )
+                        }
+                        composable(Screen.Orders.route) {
+                            OrdersScreen(
+                                innerPadding = innerPadding,
+                                isDarkTheme = isDarkTheme,
+                                onToggleTheme = { isDarkTheme = !isDarkTheme }
+                            )
+                        }
                     }
                 }
             }

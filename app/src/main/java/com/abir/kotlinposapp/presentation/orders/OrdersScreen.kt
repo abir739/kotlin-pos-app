@@ -15,13 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -47,6 +50,8 @@ import androidx.compose.material3.TopAppBarDefaults
 @Composable
 fun OrdersScreen(
     innerPadding: PaddingValues,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     viewModel: OrdersViewModel = hiltViewModel()
 ) {
     val orders by viewModel.orders.collectAsStateWithLifecycle()
@@ -56,7 +61,15 @@ fun OrdersScreen(
             title = { Text("Orders") },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface
-            )
+            ),
+            actions = {
+                IconButton(onClick = onToggleTheme) {
+                    Icon(
+                        imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode"
+                    )
+                }
+            }
         )
 
         if (orders.isEmpty()) {
@@ -124,7 +137,7 @@ private fun OrderCard(order: Order) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "৳ %.2f".format(order.totalAmount),
+                        "%.3f TND".format(order.totalAmount),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.titleMedium
@@ -172,7 +185,7 @@ private fun OrderItemRow(item: OrderItem) {
             modifier = Modifier.weight(1f)
         )
         Text(
-            "৳ %.2f".format(item.subtotal),
+            "%.3f TND".format(item.subtotal),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

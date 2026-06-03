@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.QrCode
@@ -66,6 +68,8 @@ private val avatarColors = listOf(
 @Composable
 fun ProductsScreen(
     innerPadding: PaddingValues,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     viewModel: ProductsViewModel = hiltViewModel()
 ) {
     val products by viewModel.products.collectAsStateWithLifecycle()
@@ -85,7 +89,15 @@ fun ProductsScreen(
                 title = { Text("Products") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
-                )
+                ),
+                actions = {
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode"
+                        )
+                    }
+                }
             )
 
             Box(modifier = Modifier.weight(1f)) {
@@ -238,7 +250,7 @@ private fun ProductCard(
             ) {
                 Text(product.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "৳ %.2f".format(product.price),
+                    "%.3f TND".format(product.price),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
