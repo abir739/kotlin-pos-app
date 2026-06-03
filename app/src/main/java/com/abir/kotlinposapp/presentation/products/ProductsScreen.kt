@@ -47,6 +47,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abir.kotlinposapp.domain.model.Product
 import com.abir.kotlinposapp.presentation.checkout.BarcodeScannerScreen
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+
+private val avatarColors = listOf(
+    Color(0xFF3B82F6),
+    Color(0xFF8B5CF6),
+    Color(0xFFF97316),
+    Color(0xFFF43F5E),
+    Color(0xFF06B6D4),
+    Color(0xFFF59E0B)
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,7 +81,12 @@ fun ProductsScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            TopAppBar(title = { Text("Products") })
+            TopAppBar(
+                title = { Text("Products") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
 
             Box(modifier = Modifier.weight(1f)) {
                 if (products.isEmpty()) {
@@ -190,12 +209,33 @@ private fun ProductCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val colorIdx = ((product.id % avatarColors.size).toInt() + avatarColors.size) % avatarColors.size
+    val avatarColor = avatarColors[colorIdx]
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(avatarColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    product.name.take(1).uppercase().ifBlank { "?" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
                 Text(product.name, fontWeight = FontWeight.SemiBold)
                 Text(
                     "৳ %.2f".format(product.price),

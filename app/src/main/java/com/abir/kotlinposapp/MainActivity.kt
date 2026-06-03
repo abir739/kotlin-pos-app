@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
 
                 val navItems = listOf(
                     Triple(Screen.Products, "Products", Icons.Default.Inventory2),
-                    Triple(Screen.Checkout, "Checkout", Icons.Default.ShoppingCart),
+                    Triple(Screen.Checkout, "Cart", Icons.Default.ShoppingCart),
                     Triple(Screen.Orders, "Orders", Icons.Default.Receipt)
                 )
 

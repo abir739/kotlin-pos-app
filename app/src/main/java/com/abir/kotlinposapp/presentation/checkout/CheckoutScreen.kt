@@ -55,6 +55,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abir.kotlinposapp.domain.model.CartItem
 import com.abir.kotlinposapp.domain.model.Product
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+
+private val avatarColors = listOf(
+    Color(0xFF3B82F6),
+    Color(0xFF8B5CF6),
+    Color(0xFFF97316),
+    Color(0xFFF43F5E),
+    Color(0xFF06B6D4),
+    Color(0xFFF59E0B)
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +148,10 @@ fun CheckoutScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Checkout") },
+                    title = { Text("Cart") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
                     actions = {
                         IconButton(onClick = { showScanner = true }) {
                             Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
@@ -242,23 +262,52 @@ private fun CartItemCard(
     onDecrease: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val colorIdx = ((cartItem.product.id % avatarColors.size).toInt() + avatarColors.size) % avatarColors.size
+    val avatarColor = avatarColors[colorIdx]
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(cartItem.product.name, fontWeight = FontWeight.SemiBold)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(avatarColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    cartItem.product.name.take(1).uppercase().ifBlank { "?" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
+                Text(
+                    cartItem.product.name,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(
                     "৳ %.2f each".format(cartItem.product.price),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    "Subtotal: ৳ %.2f".format(cartItem.subtotal),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                if (cartItem.product.barcode.isNotBlank()) {
+                    Text(
+                        cartItem.product.barcode,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             IconButton(onClick = onDecrease) {
@@ -285,6 +334,9 @@ private fun CartItemCard(
 
 @Composable
 private fun OrderSummary(total: Double, onPlaceOrder: () -> Unit) {
+    val tax = total * 0.07
+    val grandTotal = total + tax
+
     Column(modifier = Modifier.padding(16.dp)) {
         HorizontalDivider()
         Spacer(modifier = Modifier.height(12.dp))
@@ -292,9 +344,27 @@ private fun OrderSummary(total: Double, onPlaceOrder: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Total", style = MaterialTheme.typography.titleLarge)
+            Text("Subtotal", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("৳ %.2f".format(total), style = MaterialTheme.typography.bodyLarge)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Tax (7%)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("৳ %.2f".format(tax), style = MaterialTheme.typography.bodyLarge)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Total", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "৳ %.2f".format(total),
+                "৳ %.2f".format(grandTotal),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -303,9 +373,13 @@ private fun OrderSummary(total: Double, onPlaceOrder: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = onPlaceOrder,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
-            Text("Place Order")
+            Text("Place Order", fontWeight = FontWeight.Bold)
         }
     }
 }

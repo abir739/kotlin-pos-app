@@ -41,6 +41,7 @@ import com.abir.kotlinposapp.domain.model.OrderItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.TopAppBarDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +52,12 @@ fun OrdersScreen(
     val orders by viewModel.orders.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-        TopAppBar(title = { Text("Orders") })
+        TopAppBar(
+            title = { Text("Orders") },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        )
 
         if (orders.isEmpty()) {
             Box(
